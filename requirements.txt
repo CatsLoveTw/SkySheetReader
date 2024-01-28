@@ -1,0 +1,4 @@
+reportlab
+PyMuPDF
+frontend
+datetime
