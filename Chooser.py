@@ -3,6 +3,20 @@ import json
 import time
 
 
+def openFileWithJSON (filePath, mode = "r", encoding = "utf-8"):
+    with open(filePath, mode, encoding=encoding, errors="ignore") as f:
+        text = f.read()
+        f.close()
+
+    try:
+        JSON = json.loads(text)[0]
+        return JSON
+    except json.decoder.JSONDecodeError:
+        if encoding == "utf-16":
+            return False
+        return openFileWithJSON(filePath, mode, encoding="utf-16")
+
+
 def chosenFile (EXIT):
     _txt = os.listdir("studioTXT")
 
@@ -12,16 +26,14 @@ def chosenFile (EXIT):
 
     for i in _txt:
         if i.endswith(".txt"):
-            with open(f"studioTXT/{i}", "r", encoding="utf-8") as f:
-                text = f.read()
-                f.close()
-            try:
-                json.loads(text)[0]
+            
+            f = openFileWithJSON(f"studioTXT/{i}")
+            if not f:
+                txt.append(i + ".error")# 不符合檔案需求
+            else:
                 txt.append(i)
                 successTXT.append(i)
                 success = True
-            except json.decoder.JSONDecodeError:
-                txt.append(i + ".error")# 不符合檔案需求
 
 
     if success == False:

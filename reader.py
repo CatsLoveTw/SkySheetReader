@@ -19,13 +19,23 @@ def EXIT ():
 
 file = Chooser.chosenFile(EXIT)
 print("~~~~~~~~~生成中~~~~~~~~~")
-with open(f"studioTXT/{file}", "r", encoding="utf-8") as f:
-    text = f.read()
-    f.close()
 
-Compose = json.loads(text)[0]
+Compose = Chooser.openFileWithJSON(f"studioTXT/{file}")
 
 songName = Compose["name"]
+
+songSpeed = Compose["bpm"]
+
+try:
+    songAuthor = Compose["author"]
+except KeyError:
+    # 好像有些舊版不會有Author和transcribedBy
+    songAuthor = "None"
+
+try:
+    transcribedBy = Compose["transcribedBy"]
+except KeyError:
+    transcribedBy = "None"
 
 notes = Compose["songNotes"]
 
@@ -59,7 +69,7 @@ for note in notes:
         if noteTimes == beforeTimes:
             if beforeKey == key.split("Key")[1]:
                 note2[note2.__len__()-deleteCount] = note
-                note2.pop()
+                # note2.pop()
                 continue
 
             newNotes[newNotes.__len__()-1].append(note)
@@ -84,7 +94,9 @@ sheets = [
     "", # 主旋律
     "", # 和弦1
     "", # 和弦2
-    ""  # 和弦3
+    "",  # 和弦3
+    "",  # 和弦4
+    "",  # 和弦5
 ]
 
 
@@ -96,7 +108,7 @@ for notes in newNotes:
     continueIndex = -1 # 處理顏色音
     for i in range(notes.__len__()):
         nowSheetsIndex = i-bCounts
-        if (i - bCounts) == 4:
+        if (i - bCounts) == sheets.__len__():
             break # 太多和弦 暫時不支援
 
         if notes[notes.__len__()-1-i] == "p": # 間隔
@@ -105,8 +117,8 @@ for notes in newNotes:
             continue
 
         if (i+1) == notes.__len__():
-            if (notes.__len__() - int(bCounts / 2)) < 4:
-                for j in range(int(i+1-bCounts / 2), 4):
+            if (notes.__len__() - int(bCounts / 2)) < sheets.__len__():
+                for j in range(int(i+1-bCounts / 2), sheets.__len__()):
                     sheets[j] += "p"
 
         if i == continueIndex:
@@ -150,8 +162,19 @@ for notes in newNotes:
         sheets[nowSheetsIndex] += coloredNote
         
 
-createPDF(sheets, songName)
+# print(sheets)
+noteRange = 0
+for i in sheets:
+    if i.replace("p", "").__len__() > 0:
+        noteRange += 1
 
-os.remove("composeDemo.pdf")
+
+createPDF(sheets, songName, noteRange, songSpeed, songAuthor, transcribedBy)
+
+try:
+    os.remove("composeDemo.pdf")
+except: 
+    pass
+
 print("SUCCESS > 簡譜製造成功，去 jpg 資料夾看看吧!")
 EXIT()

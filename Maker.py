@@ -9,7 +9,7 @@ import math
 
 
 
-def setNote(cav: canvas.Canvas, note: list[str], position):
+def setNote(cav: canvas.Canvas, note: list[str], position, noteRange: int):
     """
     note 最多7個字/3個元素，若要音符則在字串打一個空格即可
     note 高音符號在數字後面加. 即可 ex:1.
@@ -17,16 +17,17 @@ def setNote(cav: canvas.Canvas, note: list[str], position):
     """
     if position["x"] >= 580-92:
         position["x"] = 20
-        position["y"] -= 90
+        position["y"] -= noteRange * 16 + 30
+        
     
-    if position["y"] <= 60:
+    if position["y"] <= noteRange * 16 + 30:
         cav.showPage()
         A4_height = A4[1]
         A4_width = A4[0]
         cav.setFillColorRGB(0, 0, 0)
         cav.rect(0, 0, A4_width, A4_height, fill=1)
         position["y"] = 780
-        setLine(cav)
+        setLine(cav, noteRange)
         
 
     colorChanged = False # 是否變化為藍色
@@ -54,17 +55,19 @@ def setNote(cav: canvas.Canvas, note: list[str], position):
 
 
 
-def setLine(cav: canvas.Canvas):
+def setLine(cav: canvas.Canvas, noteRange: int):
     x = 20
     for i in range(7):
         y = 780
-        for j in range(8):
+        for j in range(18):
             # x軸 / 最大 660 最低 20
             # y軸 / 最高 780 最低 60
             # Gray: 128, 128, 128
+            if y <= noteRange * 16 + 30:
+                break
             cav.setStrokeColorRGB(128/255, 128/255, 128/255)
-            cav.line(x, y, x, y-80)
-            y -= 90
+            cav.line(x, y, x, y-(noteRange * 16 + 20))
+            y -= noteRange * 16 + 30
         x += 110
 
 
@@ -75,7 +78,7 @@ pdfmetrics.registerFont(font)
 pdfmetrics.registerFont(font2)
 
 
-def createPDF (sheetData: list[str], songName: str):
+def createPDF (sheetData: list[str], songName: str, noteRange: int, songSpeed: int, author: str, transcibed: str):
     # 轉化
     position = {
         "x": 20,
@@ -116,71 +119,53 @@ def createPDF (sheetData: list[str], songName: str):
         
 
     # 處理sheetData
-    sheetLine1 = transformText(sheetData[0])
-    sheetLine2 = transformText(sheetData[1])
-    sheetLine3 = transformText(sheetData[2])
-    sheetLine4 = transformText(sheetData[3])
     
+    Lines_End = []
+    Lines_First = []
+    for sheet in sheetData:
+        newLine = []
+
+        sheetLine = transformText(sheet)
+        LineLength = math.ceil(sheetLine.__len__() / 7)
+        # print("a", charCount(sheetLine, "b"))
+        # print(LineLength)
+        bCount = 0
+        for i in range(LineLength):
+            if sheetLine == "":
+                # print("test", i)
+                break
+
+            text = sheetLine[0:7]
+            
+            counts = charCount(text, "b")
+            
+            text = sheetLine[0:(7+counts)]
+            while True:
+                if (text.replace("b", "").__len__() < 7) and text.__len__() != sheetLine.__len__():
+                    counts += 1
+                    text = sheetLine[0:(7+counts)]
+                else:
+                    break
+            bCount += counts
+            # text = sheetLine[0:(7+counts)]
+            
+            newLine.append(text)
+            sheetLine = sheetLine[(7+counts):]
+        # print("b", bCount)
+        
+        Lines_First.append(newLine)
     
-    newLine1 = []
-    newLine2 = []
-    newLine3 = []
-    newLine4 = []
-
-
-
-    L1 = math.ceil(sheetLine1.__len__() / 7)
-    L2 = math.ceil(sheetLine2.__len__() / 7)
-    L3 = math.ceil(sheetLine3.__len__() / 7)
-    L4 = math.ceil(sheetLine4.__len__() / 7)
+    # print(Lines_First)
     
-    for i in range(L1):
-        if sheetLine1 == "":
-            break
-
-        text = sheetLine1[0:7]
-
-        counts = charCount(text, "b")
-        text = sheetLine1[0:(7+counts)]
+    for i in range(Lines_First[0].__len__()):
+        L2 = []
+        for j in range(Lines_First.__len__()):
+            # print(Lines_First.__len__(), Lines_First[j].__len__())
+            L2.append(Lines_First[j][i])
         
-        newLine1.append(text)
-        sheetLine1 = sheetLine1[(7+counts):]
-    for i in range(L2):
-        if sheetLine2 == "":
-            break
+        Lines_End.append(L2)
 
-        text = sheetLine2[0:7]
-
-        counts = charCount(text, "b")
-        text = sheetLine2[0:(7+counts)]
-        
-        newLine2.append(text)
-        sheetLine2 = sheetLine2[(7+counts):]
-    for i in range(L3):
-        if sheetLine3 == "":
-            break
-
-        text = sheetLine3[0:7]
-
-        counts = charCount(text, "b")
-        text = sheetLine3[0:(7+counts)]
-        
-        newLine3.append(text)
-        sheetLine3 = sheetLine3[(7+counts):]
-    for i in range(L4):
-        if sheetLine4 == "":
-            break
-
-        text = sheetLine4[0:7]
-
-        counts = charCount(text, "b")
-        text = sheetLine4[0:(7+counts)]
-        
-        newLine4.append(text)
-        sheetLine4 = sheetLine4[(7+counts):]
-
-
-
+    # print(Lines_End)
     # pdf
     cav = canvas.Canvas(
         filename="composeDemo.pdf"
@@ -197,13 +182,28 @@ def createPDF (sheetData: list[str], songName: str):
     cav.setFont("chinese", 36, 1)
     cav.drawCentredString(300, 800, f"~{songName}~")
 
+    # author & speed & transcribed
+    cav.setFillColorRGB(1, 1, 1)
+    cav.setFont("chinese", 13, 1)
+    cav.drawString(450, 815, f"作者: {author}")
+
+    cav.setFillColorRGB(1, 1, 1)
+    cav.setFont("chinese", 13, 1)
+    cav.drawString(450, 800, f"改編: {transcibed}")
+
+    cav.setFillColorRGB(1, 1, 1)
+    cav.setFont("chinese", 13, 1)
+    cav.drawString(15, 800, f"曲速: {songSpeed}")
+
+
     # Line
-    setLine(cav)
+    setLine(cav, noteRange)
 
 
     # Note
-    for i in range(newLine1.__len__()):
-        setNote(cav, [newLine1[i], newLine2[i], newLine3[i], newLine4[i]], position)
+    for newLine1 in Lines_End:
+        # print(newLine1)
+        setNote(cav, newLine1, position, noteRange)
     
     # setNote(cav, ["7123523", "1234567", "12345 7", "1234567"])
 
