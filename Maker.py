@@ -7,6 +7,13 @@ import fitz
 import math
 
 
+def checkWinError (dirName: str):
+    try:
+        os.makedirs(dirName)
+        os.removedirs(dirName)
+        return False
+    except OSError:
+        return True
 
 
 def setNote(cav: canvas.Canvas, note: list[str], position, noteRange: int):
@@ -211,11 +218,24 @@ def createPDF (sheetData: list[str], songName: str, noteRange: int, songSpeed: i
 
 
     # PDF & Folder
-    if os.path.isdir(f"./jpg/{songName}") == False:
-        os.makedirs(f"./jpg/{songName}")
+    FolderName = f"{songName}--{author}"
+
+    if os.path.isdir(f"./jpg/{FolderName}") == False:
+        try:
+            os.makedirs(f"./jpg/{FolderName}")
+        except OSError:
+            # 找哪個字引發語法錯誤
+            for i in range(FolderName.__len__()):
+                result = checkWinError(FolderName[i])
+                if result:
+                    FolderName = FolderName.replace(FolderName[i], ".")
+            
+            os.makedirs(f"./jpg/{FolderName}")
+            
+            
 
     now = datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
-    os.makedirs(f"./jpg/{songName}/{now}")
+    os.makedirs(f"./jpg/{FolderName}/{now}")
 
 
     def pdf_image(pdfPath: str, imgPath):
@@ -229,4 +249,4 @@ def createPDF (sheetData: list[str], songName: str, noteRange: int, songSpeed: i
             pm._writeIMG(imgPath + str(pg) + ".jpg", format_=1, jpg_quality=100)
             pdf.close()
 
-    pdf_image(r"composeDemo.pdf", f"./jpg/{songName}/{now}/")
+    pdf_image(r"composeDemo.pdf", f"./jpg/{FolderName}/{now}/")
